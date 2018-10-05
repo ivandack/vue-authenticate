@@ -1,4 +1,4 @@
-import OAuthPopup from './popup.js'
+import DisplayFactory from '../display/display'
 import { objectExtend, isString, isObject, isFunction, joinUrl } from '../utils.js'
 
 const defaultProviderConfig = {
@@ -30,10 +30,10 @@ export default class OAuth {
    * @return {Promise}
    */
   init(userData) {
-    this.oauthPopup = new OAuthPopup('about:blank', this.providerConfig.name, this.providerConfig.popupOptions)
+    this.oauthDisplay = DisplayFactory('about:blank', this.providerConfig)
 
     if (window && !window['cordova']) {
-      this.oauthPopup.open(this.providerConfig.redirectUri, true)
+      this.oauthDisplay.open(this.providerConfig.redirectUri, true)
     }
 
     return this.getRequestToken().then((response) => {
@@ -69,11 +69,11 @@ export default class OAuth {
   openPopup(response) {
     const url = [this.providerConfig.authorizationEndpoint, this.buildQueryString(response[this.options.responseDataKey])].join('?');
 
-    this.oauthPopup.popup.location = url
+    this.oauthDisplay.popup.location = url
     if (window && window['cordova']) {
-      return this.oauthPopup.open(this.providerConfig.redirectUri)
+      return this.oauthDisplay.open(this.providerConfig.redirectUri)
     } else {
-      return this.oauthPopup.pooling(this.providerConfig.redirectUri)
+      return this.oauthDisplay.pooling(this.providerConfig.redirectUri)
     }
   }
 

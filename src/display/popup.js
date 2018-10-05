@@ -8,12 +8,12 @@ import { objectExtend, parseQueryString, getFullUrlPath, isUndefined } from '../
  * @copyright Class mostly taken from https://github.com/sahat/satellizer 
  * and adjusted to fit vue-authenticate library
  */
-export default class OAuthPopup {
-  constructor(url, name, popupOptions) {
+export default class OAuthPopupDisplay {
+  constructor(url, options) {
     this.popup = null
     this.url = url
-    this.name = name
-    this.popupOptions = popupOptions
+    this.name = options.name
+    this.popupOptions = options.popupOptions
   }
 
   open(redirectUri, skipPooling) {

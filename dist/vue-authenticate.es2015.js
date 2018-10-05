@@ -820,14 +820,14 @@ function StorageFactory(options) {
  * @copyright Class mostly taken from https://github.com/sahat/satellizer 
  * and adjusted to fit vue-authenticate library
  */
-var OAuthPopup = function OAuthPopup(url, name, popupOptions) {
+var OAuthPopupDisplay = function OAuthPopupDisplay(url, options) {
   this.popup = null;
   this.url = url;
-  this.name = name;
-  this.popupOptions = popupOptions;
+  this.name = options.name;
+  this.popupOptions = options.popupOptions;
 };
 
-OAuthPopup.prototype.open = function open (redirectUri, skipPooling) {
+OAuthPopupDisplay.prototype.open = function open (redirectUri, skipPooling) {
   try {
     this.popup = window.open(this.url, this.name, this._stringifyOptions());
     if (this.popup && this.popup.focus) {
@@ -844,7 +844,7 @@ OAuthPopup.prototype.open = function open (redirectUri, skipPooling) {
   }
 };
 
-OAuthPopup.prototype.pooling = function pooling (redirectUri) {
+OAuthPopupDisplay.prototype.pooling = function pooling (redirectUri) {
     var this$1 = this;
 
   return new Promise$1(function (resolve, reject) {
@@ -889,7 +889,7 @@ OAuthPopup.prototype.pooling = function pooling (redirectUri) {
   })
 };
 
-OAuthPopup.prototype._stringifyOptions = function _stringifyOptions () {
+OAuthPopupDisplay.prototype._stringifyOptions = function _stringifyOptions () {
     var this$1 = this;
 
   var options = [];
@@ -900,6 +900,42 @@ OAuthPopup.prototype._stringifyOptions = function _stringifyOptions () {
   }
   return options.join(',')
 };
+
+/**
+ * OAuth2 page redirect management class
+ * 
+ * @author Ivan Dackiewicz <https://github.com/ivandack>
+ * @copyright Class mostly taken from https://github.com/sahat/satellizer 
+ * and adjusted to fit vue-authenticate library
+ */
+var OAuthPageDisplay = function OAuthPageDisplay(url, options) {
+  this.url = url;
+  delete(options.display);
+};
+
+OAuthPageDisplay.prototype.open = function open (redirectUri) {
+  try {
+    document.location.replace(this.url);
+  } catch(e) {
+    return Promise$1.reject(new Error('OAuth redirect error occurred: ' + e))
+  }
+};
+
+var DISPLAY_TYPES = {
+  'popup': OAuthPopupDisplay,
+  'page': OAuthPageDisplay
+};
+
+/**
+ * Returns the display class mentioned in the param.
+ * 
+ * @param string type of the display.
+ */
+function DisplayFactory(url, options) {
+  var displayType = DISPLAY_TYPES[options.display];
+  if (!displayType) { throw new Error('Display type "' + options.display + '" unknown') }
+  return new displayType(url, options);
+}
 
 var defaultProviderConfig = {
   name: null,
@@ -931,10 +967,10 @@ var OAuth = function OAuth($http, storage, providerConfig, options) {
 OAuth.prototype.init = function init (userData) {
     var this$1 = this;
 
-  this.oauthPopup = new OAuthPopup('about:blank', this.providerConfig.name, this.providerConfig.popupOptions);
+  this.oauthDisplay = DisplayFactory('about:blank', this.providerConfig);
 
   if (window && !window['cordova']) {
-    this.oauthPopup.open(this.providerConfig.redirectUri, true);
+    this.oauthDisplay.open(this.providerConfig.redirectUri, true);
   }
 
   return this.getRequestToken().then(function (response) {
@@ -970,11 +1006,11 @@ OAuth.prototype.getRequestToken = function getRequestToken () {
 OAuth.prototype.openPopup = function openPopup (response) {
   var url = [this.providerConfig.authorizationEndpoint, this.buildQueryString(response[this.options.responseDataKey])].join('?');
 
-  this.oauthPopup.popup.location = url;
+  this.oauthDisplay.popup.location = url;
   if (window && window['cordova']) {
-    return this.oauthPopup.open(this.providerConfig.redirectUri)
+    return this.oauthDisplay.open(this.providerConfig.redirectUri)
   } else {
-    return this.oauthPopup.pooling(this.providerConfig.redirectUri)
+    return this.oauthDisplay.pooling(this.providerConfig.redirectUri)
   }
 };
 
@@ -1031,6 +1067,7 @@ var defaultProviderConfig$1 = {
     redirectUri: 'redirectUri'
   },
   oauthType: '2.0',
+  display: 'popup',
   popupOptions: {}
 };
 
@@ -1053,11 +1090,16 @@ OAuth2.prototype.init = function init (userData) {
   }
 
   var url = [this.providerConfig.authorizationEndpoint, this._stringifyRequestParams()].join('?');
+  console.log(url);
 
-  this.oauthPopup = new OAuthPopup(url, this.providerConfig.name, this.providerConfig.popupOptions);
+  try {
+    this.oauthDisplay = DisplayFactory(url, this.providerConfig);
+  } catch(error) {
+    return Promise.reject(error);
+  }
     
   return new Promise(function (resolve, reject) {
-    this$1.oauthPopup.open(this$1.providerConfig.redirectUri).then(function (response) {
+    this$1.oauthDisplay.open(this$1.providerConfig.redirectUri).then(function (response) {
       if (this$1.providerConfig.responseType === 'token' || !this$1.providerConfig.url) {
         return resolve(response)
       }
