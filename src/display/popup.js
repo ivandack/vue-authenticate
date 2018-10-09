@@ -1,5 +1,6 @@
 import Promise from '../promise.js'
 import { objectExtend, parseQueryString, getFullUrlPath, isUndefined } from '../utils.js'
+import services from '../services'
 
 /**
  * OAuth2 popup management class
@@ -50,19 +51,10 @@ export default class OAuthPopupDisplay {
           const popupWindowPath = getFullUrlPath(this.popup.location)
 
           if (popupWindowPath === redirectUriPath) {
-            if (this.popup.location.search || this.popup.location.hash) {
-              const query = parseQueryString(this.popup.location.search.substring(1).replace(/\/$/, ''));
-              const hash = parseQueryString(this.popup.location.hash.substring(1).replace(/[\/$]/, ''));
-              let params = objectExtend({}, query);
-              params = objectExtend(params, hash)
-
-              if (params.error) {
-                reject(new Error(params.error));
-              } else {
-                resolve(params);
-              }
-            } else {
-              reject(new Error('OAuth redirect has occurred but no query or hash parameters were found.'))
+            try {
+              resolve(services.processCallback(this.popup));
+            } catch (error) {
+              reject(error);
             }
 
             clearInterval(poolingInterval)

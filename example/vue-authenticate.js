@@ -63,7 +63,7 @@ function isFunction(value) {
   return typeof value === 'function'
 }
 
-function objectExtend(a, b) {
+function objectExtend$1(a, b) {
 
   // Don't touch 'null' or 'undefined' objects.
   if (a == null || b == null) {
@@ -75,7 +75,7 @@ function objectExtend(a, b) {
       if (Object.prototype.toString.call(a[key]) != '[object Object]') {
         a[key] = b[key];
       } else {
-        a[key] = objectExtend(a[key], b[key]);
+        a[key] = objectExtend$1(a[key], b[key]);
       }
     } else {
       a[key] = b[key];
@@ -135,19 +135,7 @@ function getFullUrlPath(location) {
  * @param  {String} Query string
  * @return {String}
  */
-function parseQueryString(str) {
-  var obj = {};
-  var key;
-  var value;
-  (str || '').split('&').forEach(function (keyValue) {
-    if (keyValue) {
-      value = keyValue.split('=');
-      key = decodeURIComponent(value[0]);
-      obj[key] = (!!value[1]) ? decodeURIComponent(value[1]) : true;
-    }
-  });
-  return obj;
-}
+
 
 /**
  * Decode base64 string
@@ -678,7 +666,7 @@ var defaultOptions = {
 };
 
 var CookieStorage = function CookieStorage(defaultOptions) {
-  this._defaultOptions = objectExtend({
+  this._defaultOptions = objectExtend$1({
     domain: getCookieDomainUrl(),
     expires: null,
     path: '/',
@@ -687,7 +675,7 @@ var CookieStorage = function CookieStorage(defaultOptions) {
 };
 
 CookieStorage.prototype.setItem = function setItem (key, value) {
-  var options = objectExtend({}, this._defaultOptions);
+  var options = objectExtend$1({}, this._defaultOptions);
   var cookie = formatCookie(key, value, options);
   this._setCookie(cookie);
 };
@@ -699,8 +687,8 @@ CookieStorage.prototype.getItem = function getItem (key) {
 
 CookieStorage.prototype.removeItem = function removeItem (key) {
   var value = '';
-  var defaultOptions = objectExtend({}, this._defaultOptions);
-  var options = objectExtend(defaultOptions, {
+  var defaultOptions = objectExtend$1({}, this._defaultOptions);
+  var options = objectExtend$1(defaultOptions, {
     expires: new Date(0)
   });
   var cookie = formatCookie(key, value, options);
@@ -819,6 +807,30 @@ function StorageFactory(options) {
   }
 }
 
+function processCallback(source) {
+  if (source.location.search || source.location.hash) {
+    var query = parseQueryString(source.location.search.substring(1).replace(/\/$/, ''));
+    var hash = parseQueryString(source.location.hash.substring(1).replace(/[\/$]/, ''));
+    var params = objectExtend({}, query);
+    params = objectExtend(params, hash);
+
+    if (params.error) {
+      throw new Error(params.error);
+    } else {
+      return params;
+    }
+  } else {
+    throw new Error('OAuth redirect has occurred but no query or hash parameters were found.');
+  }
+}
+
+var services = {
+  processPageCallback: function () {
+    return processCallback(window);
+  },
+  processCallback: processCallback
+};
+
 /**
  * OAuth2 popup management class
  * 
@@ -869,19 +881,10 @@ OAuthPopupDisplay.prototype.pooling = function pooling (redirectUri) {
         var popupWindowPath = getFullUrlPath(this$1.popup.location);
 
         if (popupWindowPath === redirectUriPath) {
-          if (this$1.popup.location.search || this$1.popup.location.hash) {
-            var query = parseQueryString(this$1.popup.location.search.substring(1).replace(/\/$/, ''));
-            var hash = parseQueryString(this$1.popup.location.hash.substring(1).replace(/[\/$]/, ''));
-            var params = objectExtend({}, query);
-            params = objectExtend(params, hash);
-
-            if (params.error) {
-              reject(new Error(params.error));
-            } else {
-              resolve(params);
-            }
-          } else {
-            reject(new Error('OAuth redirect has occurred but no query or hash parameters were found.'));
+          try {
+            resolve(services.processCallback(this$1.popup));
+          } catch (error) {
+            reject(error);
           }
 
           clearInterval(poolingInterval);
@@ -960,8 +963,8 @@ var defaultProviderConfig = {
 var OAuth = function OAuth($http, storage, providerConfig, options) {
   this.$http = $http;
   this.storage = storage;
-  this.providerConfig = objectExtend({}, defaultProviderConfig);
-  this.providerConfig = objectExtend(this.providerConfig, providerConfig);
+  this.providerConfig = objectExtend$1({}, defaultProviderConfig);
+  this.providerConfig = objectExtend$1(this.providerConfig, providerConfig);
   this.options = options;
 };
 
@@ -993,7 +996,7 @@ OAuth.prototype.init = function init (userData) {
 OAuth.prototype.getRequestToken = function getRequestToken () {
   var requestOptions = {};
   requestOptions.method = 'POST';
-  requestOptions[this.options.requestDataKey] = objectExtend({}, this.providerConfig);
+  requestOptions[this.options.requestDataKey] = objectExtend$1({}, this.providerConfig);
   requestOptions.withCredentials = this.options.withCredentials;
   if (this.options.baseUrl) {
     requestOptions.url = joinUrl(this.options.baseUrl, this.providerConfig.url);
@@ -1027,8 +1030,8 @@ OAuth.prototype.openPopup = function openPopup (response) {
  * @return {Promise}
  */
 OAuth.prototype.exchangeForToken = function exchangeForToken (oauth, userData) {
-  var payload = objectExtend({}, userData);
-  payload = objectExtend(payload, oauth);
+  var payload = objectExtend$1({}, userData);
+  payload = objectExtend$1(payload, oauth);
   var requestOptions = {};
   requestOptions.method = 'POST';
   requestOptions[this.options.requestDataKey] = payload;
@@ -1080,8 +1083,8 @@ var defaultProviderConfig$1 = {
 var OAuth2 = function OAuth2($http, storage, providerConfig, options) {
   this.$http = $http;
   this.storage = storage;
-  this.providerConfig = objectExtend({}, defaultProviderConfig$1);
-  this.providerConfig = objectExtend(this.providerConfig, providerConfig);
+  this.providerConfig = objectExtend$1({}, defaultProviderConfig$1);
+  this.providerConfig = objectExtend$1(this.providerConfig, providerConfig);
   this.options = options;
 };
 
@@ -1133,7 +1136,7 @@ OAuth2.prototype.init = function init (userData) {
 OAuth2.prototype.exchangeForToken = function exchangeForToken (oauth, userData) {
     var this$1 = this;
 
-  var payload = objectExtend({}, userData);
+  var payload = objectExtend$1({}, userData);
 
   for (var key in defaultProviderConfig$1.responseParams) {
     var value = defaultProviderConfig$1[key];
@@ -1213,8 +1216,8 @@ OAuth2.prototype._stringifyRequestParams = function _stringifyRequestParams () {
 };
 
 var VueAuthenticate = function VueAuthenticate($http, overrideOptions) {
-  var options = objectExtend({}, defaultOptions);
-  options = objectExtend(options, overrideOptions);
+  var options = objectExtend$1({}, defaultOptions);
+  options = objectExtend$1(options, overrideOptions);
   var storage = StorageFactory(options);
 
   Object.defineProperties(this, {
